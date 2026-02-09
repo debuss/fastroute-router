@@ -32,7 +32,7 @@ class FastRouteRouter implements MiddlewareInterface
             $request = $request->withAttribute($name, $value);
         }
 
-        $request = $request->withAttribute($this->attribute, $route);
+        $request = $request->withAttribute($this->attribute, $route[1]);
 
         return $handler->handle($request);
     }
