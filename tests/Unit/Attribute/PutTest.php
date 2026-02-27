@@ -1,7 +1,8 @@
 <?php
 
-use Router\Attribute\Put;
-use Router\Attribute\Route;
+use Router\Attribute\{Put, Method};
+
+covers(Put::class);
 
 test('Put attribute creates route with PUT method', function () {
     $put = new Put('/test');
@@ -37,10 +38,10 @@ test('Put attribute can be created with name and priority', function () {
         ->and($put->priority)->toBe(5);
 });
 
-test('Put attribute extends Route', function () {
+test('Put attribute extends Method', function () {
     $put = new Put('/test');
 
-    expect($put)->toBeInstanceOf(Route::class);
+    expect($put)->toBeInstanceOf(Method::class);
 });
 
 test('Put attribute has correct PHP attribute configuration', function () {

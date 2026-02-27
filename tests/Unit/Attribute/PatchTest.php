@@ -1,7 +1,8 @@
 <?php
 
-use Router\Attribute\Patch;
-use Router\Attribute\Route;
+use Router\Attribute\{Patch, Method};
+
+covers(Patch::class);
 
 test('Patch attribute creates route with PATCH method', function () {
     $patch = new Patch('/test');
@@ -37,10 +38,10 @@ test('Patch attribute can be created with name and priority', function () {
         ->and($patch->priority)->toBe(5);
 });
 
-test('Patch attribute extends Route', function () {
+test('Patch attribute extends Method', function () {
     $patch = new Patch('/test');
 
-    expect($patch)->toBeInstanceOf(Route::class);
+    expect($patch)->toBeInstanceOf(Method::class);
 });
 
 test('Patch attribute has correct PHP attribute configuration', function () {

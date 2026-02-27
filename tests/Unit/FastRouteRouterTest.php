@@ -1,164 +1,200 @@
 <?php
 
-use Router\FastRouteRouter;
+use Router\{FastRouteRouter, Route, RouteResult};
 use FastRoute\Dispatcher;
-use Psr\Http\Message\ResponseFactoryInterface;
-use Psr\Http\Message\ResponseInterface;
-use Psr\Http\Message\ServerRequestInterface;
-use Psr\Http\Message\UriInterface;
+use Psr\Http\Message\{ResponseInterface, ServerRequestInterface, UriInterface};
 use Psr\Http\Server\RequestHandlerInterface;
+
+covers(FastRouteRouter::class);
 
 beforeEach(function () {
     $this->dispatcher = Mockery::mock(Dispatcher::class);
-    $this->responseFactory = Mockery::mock(ResponseFactoryInterface::class);
-    $this->request = Mockery::mock(ServerRequestInterface::class);
-    $this->handler = Mockery::mock(RequestHandlerInterface::class);
-    $this->response = Mockery::mock(ResponseInterface::class);
-    $this->uri = Mockery::mock(UriInterface::class);
 
-    $this->router = new FastRouteRouter($this->dispatcher, $this->responseFactory);
+    $this->router = new FastRouteRouter($this->dispatcher);
 });
 
 afterEach(function () {
     Mockery::close();
 });
 
-test('FastRouteRouter returns 404 response when route not found', function () {
-    $this->uri->shouldReceive('getPath')->andReturn('/not-found');
-    $this->request->shouldReceive('getMethod')->andReturn('GET');
-    $this->request->shouldReceive('getUri')->andReturn($this->uri);
+test('FastRouteRouter attaches not found RouteResult and delegates', function () {
+    $request = Mockery::mock(ServerRequestInterface::class);
+    $handler = Mockery::mock(RequestHandlerInterface::class);
+    $response = Mockery::mock(ResponseInterface::class);
+    $uri = Mockery::mock(UriInterface::class);
+
+    $request->shouldReceive('getMethod')
+        ->andReturn('GET');
+
+    $request->shouldReceive('getUri')
+        ->andReturn($uri);
+
+    $uri->shouldReceive('getPath')
+        ->andReturn('/missing');
 
     $this->dispatcher->shouldReceive('dispatch')
-        ->with('GET', '/not-found')
+        ->with('GET', '/missing')
         ->andReturn([Dispatcher::NOT_FOUND]);
 
-    $this->responseFactory->shouldReceive('createResponse')
-        ->with(404)
-        ->andReturn($this->response);
+    $request->shouldReceive('withAttribute')
+        ->with(RouteResult::class, Mockery::on(function ($result) {
+            return $result instanceof RouteResult
+                && $result->success === false
+                && $result->route === null
+                && $result->methods === [];
+        }))
+        ->andReturn($request);
 
-    $result = $this->router->process($this->request, $this->handler);
+    $handler->shouldReceive('handle')
+        ->with($request)
+        ->andReturn($response);
 
-    expect($result)->toBe($this->response);
+    $result = $this->router->process($request, $handler);
+
+    expect($result)->toBe($response);
 });
 
-test('FastRouteRouter returns 405 response when method not allowed', function () {
-    $this->uri->shouldReceive('getPath')->andReturn('/test');
-    $this->request->shouldReceive('getMethod')->andReturn('POST');
-    $this->request->shouldReceive('getUri')->andReturn($this->uri);
+test('FastRouteRouter attaches method not allowed RouteResult and delegates', function () {
+    $request = Mockery::mock(ServerRequestInterface::class);
+    $handler = Mockery::mock(RequestHandlerInterface::class);
+    $response = Mockery::mock(ResponseInterface::class);
+    $uri = Mockery::mock(UriInterface::class);
 
-    $allowedMethods = ['GET', 'PUT'];
+    $request->shouldReceive('getMethod')
+        ->andReturn('DELETE');
+
+    $request->shouldReceive('getUri')
+        ->andReturn($uri);
+
+    $uri->shouldReceive('getPath')
+        ->andReturn('/resource');
+
     $this->dispatcher->shouldReceive('dispatch')
-        ->with('POST', '/test')
-        ->andReturn([Dispatcher::METHOD_NOT_ALLOWED, $allowedMethods]);
+        ->with('DELETE', '/resource')
+        ->andReturn([Dispatcher::METHOD_NOT_ALLOWED, ['GET', 'POST']]);
 
-    $responseWith405 = Mockery::mock(ResponseInterface::class);
-    $this->response->shouldReceive('withHeader')
-        ->with('Allow', 'GET, PUT')
-        ->andReturn($responseWith405);
+    $request->shouldReceive('withAttribute')
+        ->with(RouteResult::class, Mockery::on(function ($result) {
+            return $result instanceof RouteResult
+                && $result->success === false
+                && $result->route === null
+                && $result->methods === ['GET', 'POST'];
+        }))
+        ->andReturn($request);
 
-    $this->responseFactory->shouldReceive('createResponse')
-        ->with(405)
-        ->andReturn($this->response);
+    $handler->shouldReceive('handle')
+        ->with($request)
+        ->andReturn($response);
 
-    $result = $this->router->process($this->request, $this->handler);
+    $result = $this->router->process($request, $handler);
 
-    expect($result)->toBe($responseWith405);
+    expect($result)->toBe($response);
 });
 
-test('FastRouteRouter dispatches found route with parameters', function () {
-    $this->uri->shouldReceive('getPath')->andReturn('/users/123');
-    $this->request->shouldReceive('getMethod')->andReturn('GET');
-    $this->request->shouldReceive('getUri')->andReturn($this->uri);
+test('FastRouteRouter attaches found RouteResult and delegates', function () {
+    $request = Mockery::mock(ServerRequestInterface::class);
+    $handler = Mockery::mock(RequestHandlerInterface::class);
+    $response = Mockery::mock(ResponseInterface::class);
+    $uri = Mockery::mock(UriInterface::class);
 
-    $routeInfo = ['handler' => 'UserController'];
-    $params = ['id' => '123'];
+    $route = new Route(['GET'], '/users/{id}', 'Handler');
+    $params = ['id' => '10'];
+
+    $request->shouldReceive('getMethod')
+        ->andReturn('GET');
+
+    $request->shouldReceive('getUri')
+        ->andReturn($uri);
+
+    $uri->shouldReceive('getPath')
+        ->andReturn('/users/10');
 
     $this->dispatcher->shouldReceive('dispatch')
-        ->with('GET', '/users/123')
-        ->andReturn([Dispatcher::FOUND, $routeInfo, $params]);
+        ->with('GET', '/users/10')
+        ->andReturn([Dispatcher::FOUND, $route, $params]);
 
-    $requestWithId = Mockery::mock(ServerRequestInterface::class);
-    $requestWithRoute = Mockery::mock(ServerRequestInterface::class);
+    $request->shouldReceive('withAttribute')
+        ->with(RouteResult::class, Mockery::on(function ($result) use ($route, $params) {
+            return $result instanceof RouteResult
+                && $result->success === true
+                && $result->route === $route
+                && $result->params === $params
+                && $result->methods === null;
+        }))
+        ->andReturn($request);
 
-    $this->request->shouldReceive('withAttribute')
-        ->with('id', '123')
-        ->andReturn($requestWithId);
+    $handler->shouldReceive('handle')
+        ->with($request)
+        ->andReturn($response);
 
-    $requestWithId->shouldReceive('withAttribute')
-        ->with(Router\Route::class, [Dispatcher::FOUND, $routeInfo, $params])
-        ->andReturn($requestWithRoute);
+    $result = $this->router->process($request, $handler);
 
-    $this->handler->shouldReceive('handle')
-        ->with($requestWithRoute)
-        ->andReturn($this->response);
-
-    $result = $this->router->process($this->request, $this->handler);
-
-    expect($result)->toBe($this->response);
+    expect($result)->toBe($response);
 });
 
-test('FastRouteRouter handles URL encoded paths', function () {
-    $this->uri->shouldReceive('getPath')->andReturn('/users/john%20doe');
-    $this->request->shouldReceive('getMethod')->andReturn('GET');
-    $this->request->shouldReceive('getUri')->andReturn($this->uri);
+test('FastRouteRouter dispatches with decoded URI path', function () {
+    $request = Mockery::mock(ServerRequestInterface::class);
+    $handler = Mockery::mock(RequestHandlerInterface::class);
+    $response = Mockery::mock(ResponseInterface::class);
+    $uri = Mockery::mock(UriInterface::class);
+
+    $request->shouldReceive('getMethod')
+        ->andReturn('GET');
+
+    $request->shouldReceive('getUri')
+        ->andReturn($uri);
+
+    $uri->shouldReceive('getPath')
+        ->andReturn('/file%20name');
 
     $this->dispatcher->shouldReceive('dispatch')
-        ->with('GET', '/users/john doe')
+        ->with('GET', '/file name')
         ->andReturn([Dispatcher::NOT_FOUND]);
 
-    $this->responseFactory->shouldReceive('createResponse')
-        ->with(404)
-        ->andReturn($this->response);
+    $request->shouldReceive('withAttribute')
+        ->with(RouteResult::class, Mockery::type(RouteResult::class))
+        ->andReturn($request);
 
-    $result = $this->router->process($this->request, $this->handler);
+    $handler->shouldReceive('handle')
+        ->with($request)
+        ->andReturn($response);
 
-    expect($result)->toBe($this->response);
+    $result = $this->router->process($request, $handler);
+
+    expect($result)->toBe($response);
 });
 
-test('FastRouteRouter can get attribute name', function () {
-    expect($this->router->getAttribute())->toBe(Router\Route::class);
-});
+test('FastRouteRouter uses custom attribute name when set', function () {
+    $request = Mockery::mock(ServerRequestInterface::class);
+    $handler = Mockery::mock(RequestHandlerInterface::class);
+    $response = Mockery::mock(ResponseInterface::class);
+    $uri = Mockery::mock(UriInterface::class);
 
-test('FastRouteRouter can set custom attribute name', function () {
-    $this->router->setAttribute('custom.attribute');
+    $this->router->setAttribute('route_result');
 
-    expect($this->router->getAttribute())->toBe('custom.attribute');
-});
+    $request->shouldReceive('getMethod')
+        ->andReturn('GET');
 
-test('FastRouteRouter adds multiple route parameters to request', function () {
-    $this->uri->shouldReceive('getPath')->andReturn('/posts/123/comments/456');
-    $this->request->shouldReceive('getMethod')->andReturn('GET');
-    $this->request->shouldReceive('getUri')->andReturn($this->uri);
+    $request->shouldReceive('getUri')
+        ->andReturn($uri);
 
-    $routeInfo = ['handler' => 'CommentController'];
-    $params = ['postId' => '123', 'commentId' => '456'];
+    $uri->shouldReceive('getPath')
+        ->andReturn('/custom');
 
     $this->dispatcher->shouldReceive('dispatch')
-        ->with('GET', '/posts/123/comments/456')
-        ->andReturn([Dispatcher::FOUND, $routeInfo, $params]);
+        ->with('GET', '/custom')
+        ->andReturn([Dispatcher::NOT_FOUND]);
 
-    $requestWithPostId = Mockery::mock(ServerRequestInterface::class);
-    $requestWithCommentId = Mockery::mock(ServerRequestInterface::class);
-    $requestWithRoute = Mockery::mock(ServerRequestInterface::class);
+    $request->shouldReceive('withAttribute')
+        ->with('route_result', Mockery::type(RouteResult::class))
+        ->andReturn($request);
 
-    $this->request->shouldReceive('withAttribute')
-        ->with('postId', '123')
-        ->andReturn($requestWithPostId);
+    $handler->shouldReceive('handle')
+        ->with($request)
+        ->andReturn($response);
 
-    $requestWithPostId->shouldReceive('withAttribute')
-        ->with('commentId', '456')
-        ->andReturn($requestWithCommentId);
+    $result = $this->router->process($request, $handler);
 
-    $requestWithCommentId->shouldReceive('withAttribute')
-        ->with(Router\Route::class, [Dispatcher::FOUND, $routeInfo, $params])
-        ->andReturn($requestWithRoute);
-
-    $this->handler->shouldReceive('handle')
-        ->with($requestWithRoute)
-        ->andReturn($this->response);
-
-    $result = $this->router->process($this->request, $this->handler);
-
-    expect($result)->toBe($this->response);
+    expect($result)->toBe($response);
 });
 

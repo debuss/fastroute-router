@@ -3,7 +3,8 @@
 namespace Router;
 
 use FastRoute\Dispatcher;
-use Psr\Http\Message\{ResponseFactoryInterface, ResponseInterface, ServerRequestInterface};
+use LogicException;
+use Psr\Http\Message\{ResponseInterface, ServerRequestInterface};
 use Psr\Http\Server\{MiddlewareInterface, RequestHandlerInterface};
 
 class FastRouteRouter implements MiddlewareInterface
@@ -12,27 +13,21 @@ class FastRouteRouter implements MiddlewareInterface
     use AttributeTrait;
 
     public function __construct(
-        private Dispatcher $router,
-        private ResponseFactoryInterface $responseFactory
+        private readonly Dispatcher $dispatcher
     ) {}
 
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
-        $route = $this->router->dispatch($request->getMethod(), rawurldecode($request->getUri()->getPath()));
+        $route_info = $this->dispatcher->dispatch($request->getMethod(), rawurldecode($request->getUri()->getPath()));
 
-        if ($route[0] === Dispatcher::NOT_FOUND) {
-            return $this->responseFactory->createResponse(404);
-        }
+        $result = match ($route_info[0]) {
+            Dispatcher::NOT_FOUND => RouteResult::fromRouteFailure([]),
+            Dispatcher::METHOD_NOT_ALLOWED => RouteResult::fromRouteFailure($route_info[1]),
+            Dispatcher::FOUND => RouteResult::fromRouteSuccess($route_info[1], $route_info[2]),
+            default => throw new LogicException('Unknown route dispatch result: ' . $route_info[0]),
+        };
 
-        if ($route[0] === Dispatcher::METHOD_NOT_ALLOWED) {
-            return $this->responseFactory->createResponse(405)->withHeader('Allow', implode(', ', $route[1]));
-        }
-
-        foreach ($route[2] as $name => $value) {
-            $request = $request->withAttribute($name, $value);
-        }
-
-        $request = $request->withAttribute($this->attribute, $route[1]);
+        $request = $request->withAttribute($this->attribute, $result);
 
         return $handler->handle($request);
     }

@@ -1,7 +1,8 @@
 <?php
 
-use Router\AttributeTrait;
-use Router\Route;
+use Router\{AttributeTrait, RouteResult};
+
+covers(AttributeTrait::class);
 
 test('AttributeTrait has default attribute value', function () {
     $class = new class {
@@ -12,7 +13,7 @@ test('AttributeTrait has default attribute value', function () {
         }
     };
 
-    expect($class->getAttributeValue())->toBe(Route::class);
+    expect($class->getAttributeValue())->toBe(RouteResult::class);
 });
 
 test('AttributeTrait can get attribute', function () {
@@ -20,7 +21,7 @@ test('AttributeTrait can get attribute', function () {
         use AttributeTrait;
     };
 
-    expect($class->getAttribute())->toBe(Route::class);
+    expect($class->getAttribute())->toBe(RouteResult::class);
 });
 
 test('AttributeTrait can set attribute', function () {
@@ -44,7 +45,7 @@ test('AttributeTrait can set and get multiple times', function () {
     $class->setAttribute('second.attribute');
     expect($class->getAttribute())->toBe('second.attribute');
 
-    $class->setAttribute(Route::class);
-    expect($class->getAttribute())->toBe(Route::class);
+    $class->setAttribute(RouteResult::class);
+    expect($class->getAttribute())->toBe(RouteResult::class);
 });
 

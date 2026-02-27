@@ -2,6 +2,8 @@
 
 use Router\Attribute\Group;
 
+covers(Group::class);
+
 test('Group attribute can be created with path only', function () {
     $group = new Group('/api');
 
