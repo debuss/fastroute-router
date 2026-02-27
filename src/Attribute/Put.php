@@ -5,7 +5,7 @@ namespace Router\Attribute;
 use Attribute;
 
 #[Attribute(Attribute::TARGET_METHOD|Attribute::IS_REPEATABLE)]
-readonly class Put extends Route
+readonly class Put extends Method
 {
 
     public function __construct(string $path, ?string $name = null, ?int $priority = null)

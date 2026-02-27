@@ -13,18 +13,18 @@ class FastRouteDispatcher implements MiddlewareInterface
     use AttributeTrait;
 
     public function __construct(
-        private ContainerInterface $container
+        private readonly ContainerInterface $container
     ) {}
 
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
-        /** @var Route $route */
-        $route = $request->getAttribute($this->attribute);
-        if ($route === null) {
+        /** @var RouteResult|null $routeResult */
+        $routeResult = $request->getAttribute($this->attribute);
+        if ($routeResult === null || !$routeResult->success) {
             return $handler->handle($request);
         }
 
-        $routeHandler = $route->handler;
+        $routeHandler = $routeResult->route->handler;
 
         if (is_string($routeHandler) && $this->container->has($routeHandler)) {
             $routeHandler = $this->container->get($routeHandler);

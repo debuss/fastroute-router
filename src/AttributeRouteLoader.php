@@ -2,7 +2,7 @@
 
 namespace Router;
 
-use Router\Attribute\{Group, Route};
+use Router\Attribute\{Group, Method};
 use FastRoute\RouteCollector;
 use FilesystemIterator;
 use RecursiveDirectoryIterator;
@@ -10,13 +10,13 @@ use RecursiveIteratorIterator;
 use ReflectionAttribute;
 use ReflectionClass;
 use ReflectionException;
-use Router\Route as RouterRoute;
 use SplFileInfo;
 
 class AttributeRouteLoader
 {
     private readonly string $namespace;
     private readonly string $path;
+    /** @var Route[] */
     private array $routes = [];
 
     public function __construct(string $namespace, string $path)
@@ -54,13 +54,13 @@ class AttributeRouteLoader
         // Sort routes by priority ascending, 0 is the highest priority
         usort(
             $this->routes,
-            fn(RouterRoute $a, RouterRoute $b) => $a->priority <=> $b->priority
+            fn(Route $a, Route $b) => $a->priority <=> $b->priority
         );
 
         // Register routes
         array_walk(
             $this->routes,
-            fn(RouterRoute $route) => $collector->addRoute($route->methods, $route->path, $route)
+            fn(Route $route) => $collector->addRoute($route->methods, $route->path, $route)
         );
     }
 
@@ -85,27 +85,30 @@ class AttributeRouteLoader
         }
 
         foreach ($reflectionClass->getMethods() as $method) {
-            $attributes = $method->getAttributes(Route::class, ReflectionAttribute::IS_INSTANCEOF);
+            $attributes = $method->getAttributes(Method::class, ReflectionAttribute::IS_INSTANCEOF);
 
             foreach ($attributes as $attribute) {
-                /** @var Route $routeInstance */
-                $routeInstance = $attribute->newInstance();
+                /** @var Method $methodInstance */
+                $methodInstance = $attribute->newInstance();
 
                 $pathSegment = array_merge(
                     explode('/', $group),
-                    explode('/', trim($routeInstance->path, '/'))
+                    explode('/', trim($methodInstance->path, '/'))
                 );
 
-                $methods = $routeInstance->methods;
-                $path = '/' . implode('/', array_filter($pathSegment, fn($segment) => $segment !== ''));
-                $name = $routeInstance->name ?: sprintf(
+                $methods = $methodInstance->methods;
+                $path = '/' . implode(
+                    '/',
+                    array_filter($pathSegment, static fn(string $segment): bool => $segment !== '')
+                );
+                $name = $methodInstance->name ?: sprintf(
                     '%s^%s',
                     implode(':', $methods),
                     $this->path
                 );
-                $priority = $groupPriority + ($routeInstance->priority ?: 0);
+                $priority = $groupPriority + ($methodInstance->priority ?: 0);
 
-                $this->routes[] = new RouterRoute(
+                $this->routes[] = new Route(
                     $methods,
                     $path,
                     $className,

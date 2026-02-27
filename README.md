@@ -25,12 +25,12 @@ An example controller :
 namespace Application\Controller;
 
 use Psr\Http\Message\{ResponseInterface, ServerRequestInterface};
-use Router\Attribute\Route;
+use Router\Attribute\Method;
 
 class HomePageController extends RequestHandlerInterface
 {
 
-    #[Route('/', methods: ['GET'])]
+    #[Method('/', methods: ['GET'])]
     public function handle(ServerRequestInterface $request): ResponseInterface
     {
         $this->logger->info('Displaying home page');

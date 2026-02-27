@@ -1,7 +1,8 @@
 <?php
 
-use Router\Attribute\Get;
-use Router\Attribute\Route;
+use Router\Attribute\{Get, Method};
+
+covers(Get::class);
 
 test('Get attribute creates route with GET method', function () {
     $get = new Get('/test');
@@ -37,10 +38,10 @@ test('Get attribute can be created with name and priority', function () {
         ->and($get->priority)->toBe(5);
 });
 
-test('Get attribute extends Route', function () {
+test('Get attribute extends Method', function () {
     $get = new Get('/test');
 
-    expect($get)->toBeInstanceOf(Route::class);
+    expect($get)->toBeInstanceOf(Method::class);
 });
 
 test('Get attribute has correct PHP attribute configuration', function () {

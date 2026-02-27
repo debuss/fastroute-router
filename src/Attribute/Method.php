@@ -2,16 +2,13 @@
 
 namespace Router\Attribute;
 
-use Attribute;
-
-#[Attribute(Attribute::TARGET_METHOD|Attribute::IS_REPEATABLE)]
-readonly class Route
+abstract readonly class Method
 {
 
     public function __construct(
         public string $path,
         /** @var string[] */
-        public array $methods = ['GET'],
+        public array $methods = [],
         public ?string $name = null,
         public ?int $priority = null
     ) {}

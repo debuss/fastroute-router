@@ -5,7 +5,7 @@ namespace Router;
 trait AttributeTrait
 {
 
-    private string $attribute = Route::class;
+    private string $attribute = RouteResult::class;
 
     public function getAttribute(): string
     {

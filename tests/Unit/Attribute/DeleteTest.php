@@ -1,7 +1,8 @@
 <?php
 
-use Router\Attribute\Delete;
-use Router\Attribute\Route;
+use Router\Attribute\{Delete, Method};
+
+covers(Delete::class);
 
 test('Delete attribute creates route with DELETE method', function () {
     $delete = new Delete('/test');
@@ -37,10 +38,10 @@ test('Delete attribute can be created with name and priority', function () {
         ->and($delete->priority)->toBe(5);
 });
 
-test('Delete attribute extends Route', function () {
+test('Delete attribute extends Method', function () {
     $delete = new Delete('/test');
 
-    expect($delete)->toBeInstanceOf(Route::class);
+    expect($delete)->toBeInstanceOf(Method::class);
 });
 
 

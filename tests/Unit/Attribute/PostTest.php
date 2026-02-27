@@ -1,7 +1,8 @@
 <?php
 
-use Router\Attribute\Post;
-use Router\Attribute\Route;
+use Router\Attribute\{Post, Method};
+
+covers(Post::class);
 
 test('Post attribute creates route with POST method', function () {
     $post = new Post('/test');
@@ -37,10 +38,10 @@ test('Post attribute can be created with name and priority', function () {
         ->and($post->priority)->toBe(5);
 });
 
-test('Post attribute extends Route', function () {
+test('Post attribute extends Method', function () {
     $post = new Post('/test');
 
-    expect($post)->toBeInstanceOf(Route::class);
+    expect($post)->toBeInstanceOf(Method::class);
 });
 
 test('Post attribute has correct PHP attribute configuration', function () {

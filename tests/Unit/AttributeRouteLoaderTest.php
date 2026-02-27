@@ -5,6 +5,8 @@ use FastRoute\RouteCollector;
 use FastRoute\RouteParser\Std;
 use Router\AttributeRouteLoader;
 
+covers(AttributeRouteLoader::class);
+
 function makeTempDir(): string
 {
     $dir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'attr_routes_' . uniqid();
@@ -51,14 +53,15 @@ it('registers attribute routes with group path', function () {
 namespace Tests\Fixtures;
 
 use Router\Attribute\Group;
-use Router\Attribute\Route;
+use Router\Attribute\Get;
+use Router\Attribute\Post;
 
 #[Group(path: 'api', priority:5)]
 class UserController{
- #[Route(methods: ['GET'], path: 'users', name: 'users.index', priority:1)]
+ #[Get(path: 'users', name: 'users.index', priority:1)]
  public function index(): void {}
 
- #[Route(methods: ['POST'], path: 'users', name: 'users.store', priority:2)]
+ #[Post(path: 'users', name: 'users.store', priority:2)]
  public function store(): void {}
 }
 PHP;
