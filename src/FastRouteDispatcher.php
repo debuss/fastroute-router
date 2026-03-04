@@ -32,6 +32,10 @@ class FastRouteDispatcher implements MiddlewareInterface
             $routeHandler = [$this->container->get($routeHandler[0]), $routeHandler[1]];
         }
 
+        foreach ($routeResult->params as $key => $value) {
+            $request = $request->withAttribute($key, $value);
+        }
+
         if ($routeHandler instanceof MiddlewareInterface) {
             return $routeHandler->process($request, $handler);
         }
